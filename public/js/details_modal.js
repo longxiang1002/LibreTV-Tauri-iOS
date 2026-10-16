@@ -31,12 +31,12 @@ async function showDetails(id, vod_name, sourceCode) {
             const customApi = (typeof getCustomApiInfo === 'function') ? getCustomApiInfo(customIndex) : null;
             if (!customApi) throw new Error('Custom API not found for detail request');
             const baseDetailUrl = customApi.detail || customApi.url; 
-            detailApiUrl = baseDetailUrl + API_CONFIG.detail.path + encodeURIComponent(id);
+            detailApiUrl = buildApiDetailUrl(baseDetailUrl, id);
         } else {
             const apiSite = API_SITES[sourceCode];
             if (!apiSite) throw new Error('API site config not found for detail request');
             const baseDetailUrl = apiSite.detail || apiSite.api; 
-            detailApiUrl = baseDetailUrl + API_CONFIG.detail.path + encodeURIComponent(id);
+            detailApiUrl = buildApiDetailUrl(baseDetailUrl, id);
         }
 
         const requestOptions = {

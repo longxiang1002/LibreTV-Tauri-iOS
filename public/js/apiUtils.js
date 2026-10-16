@@ -48,3 +48,35 @@ const createApiError = (message, statusCode) => {
     if (statusCode) err.statusCode = statusCode;
     return err;
 };
+
+/**
+ * 智能 API 地址拼接工具。
+ * 兼容两种来源：
+ *   1. 内置源：baseUrl 为纯域名（如 http://caiji.dyttzyapi.com）→ 拼接 API_CONFIG.search.path
+ *   2. 订阅导入源：baseUrl 已含完整 API 路径（如 http://cj.ffzyapi.com/api.php/provide/vod）
+ *      → 直接追加查询参数，避免路径重复导致 404
+ */
+function apiBaseHasFullPath(baseUrl) {
+    const b = (baseUrl || '').trim().replace(/\/+$/, '');
+    return /\/api\.php\/provide\/vod$/i.test(b) || /\/provide\/vod$/i.test(b);
+}
+
+function buildApiSearchUrl(baseUrl, query) {
+    const b = (baseUrl || '').trim().replace(/\/+$/, '');
+    const q = encodeURIComponent(query);
+    if (apiBaseHasFullPath(b)) return `${b}/?ac=videolist&wd=${q}`;
+    return `${b}${API_CONFIG.search.path}${q}`;
+}
+
+function buildApiPageUrl(baseUrl, query, page) {
+    const b = (baseUrl || '').trim().replace(/\/+$/, '');
+    const q = encodeURIComponent(query);
+    if (apiBaseHasFullPath(b)) return `${b}/?ac=videolist&wd=${q}&pg=${page}`;
+    return `${b}${API_CONFIG.search.pagePath.replace('{query}', q).replace('{page}', page)}`;
+}
+
+function buildApiDetailUrl(baseUrl, id) {
+    const b = (baseUrl || '').trim().replace(/\/+$/, '');
+    if (apiBaseHasFullPath(b)) return `${b}/?ac=videolist&ids=${encodeURIComponent(id)}`;
+    return `${b}${API_CONFIG.detail.path}${id}`;
+}

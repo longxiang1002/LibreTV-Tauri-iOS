@@ -44,13 +44,13 @@ async function search() {
                     if (!customApi) return [];
                     apiBaseUrl = customApi.url;
                     // API_CONFIG assumed to be global or defined elsewhere
-                    apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiUrl = buildApiSearchUrl(apiBaseUrl, query);
                     apiName = customApi.name;
                 } else {
                     // API_SITES assumed to be global
                     if (!API_SITES[apiId]) return [];
                     apiBaseUrl = API_SITES[apiId].api;
-                    apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiUrl = buildApiSearchUrl(apiBaseUrl, query);
                     apiName = API_SITES[apiId].name;
                 }
                 
@@ -105,9 +105,7 @@ async function search() {
                 if (pagesToFetch > 0) {
                     const additionalPagePromises = [];
                     for (let page = 2; page <= pagesToFetch + 1; page++) {
-                        const pageUrl = apiBaseUrl + API_CONFIG.search.pagePath
-                            .replace('{query}', encodeURIComponent(query))
-                            .replace('{page}', page);
+                        const pageUrl = buildApiPageUrl(apiBaseUrl, query, page);
                         
                         const pagePromise = (async () => {
                             try {

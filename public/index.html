@@ -213,6 +213,18 @@
                     </div>
                 </div>
                 
+                <!-- 订阅管理区域 -->
+                <div class="p-3 bg-[#151515] rounded-lg shadow-inner">
+                    <label class="block text-sm font-medium text-gray-400 mb-3 border-b border-[#333] pb-1">订阅管理</label>
+                    <p class="text-xs text-gray-500 mb-2">支持 LibreTV-SourceList v2 订阅：粘贴链接或 JSON，一次性导入全部点播源并自动启用。</p>
+                    
+                    <input type="text" id="subscriptionUrlInput" placeholder="订阅链接（如 https://paste.rs/xxxx）" class="w-full bg-[#222] border border-[#333] text-white px-2 py-1 rounded mb-2" autocomplete="off">
+                    <button onclick="handleSubscriptionUrlImport()" class="px-4 py-2 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg mb-3">从链接导入订阅</button>
+                    
+                    <textarea id="subscriptionJsonInput" placeholder="或直接粘贴订阅 JSON 内容" rows="4" class="w-full bg-[#222] border border-[#333] text-white px-2 py-1 rounded mb-2" autocomplete="off"></textarea>
+                    <button onclick="handleSubscriptionTextImport()" class="px-4 py-2 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg">从 JSON 文本导入订阅</button>
+                </div>
+
                 <!-- 内容过滤设置区域 -->
                 <div class="p-3 bg-[#151515] rounded-lg shadow-inner">
                     <label class="block text-sm font-medium text-gray-400 mb-3 border-b border-[#333] pb-1">功能开关</label>
@@ -478,6 +490,7 @@
     <script src="js/details_modal.js"></script>
     <script src="js/player_navigation.js"></script>
     <script src="js/config_io.js"></script>
+    <script src="js/subscription.js"></script>
     <script src="js/douban_api.js"></script>
     <script src="js/douban_ui.js"></script>
     <script src="js/douban_logic.js"></script>

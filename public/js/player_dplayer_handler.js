@@ -50,6 +50,46 @@ function initPlayer(videoUrl, sourceCode) {
             pic: 'image/nomedia.png',
             customType: {
                 hls: function(videoElement, playerInstance) { // Corrected parameters for DPlayer customType
+                    // ===== iOS 原生 HLS 路径 =====
+                    // iOS Safari/WKWebView 原生支持 HLS（application/vnd.apple.mpegurl），
+                    // 直接交给系统播放器（AVPlayer）播 m3u8，跳过 hls.js 的 MSE：
+                    // 播放更稳、更省电、加载更快，也不受 MSE 缓冲限制拖慢。
+                    const nativeHlsSupport = typeof videoElement.canPlayType === 'function' &&
+                        (videoElement.canPlayType('application/vnd.apple.mpegurl') !== '');
+                    if (nativeHlsSupport) {
+                        console.log('[LibreTV] 检测到 iOS 原生 HLS 支持，使用系统播放器（不走 hls.js MSE）');
+                        videoElement.addEventListener('playing', function() {
+                            hlsPlaybackStarted = true;
+                            errorDisplayedGlobal = false;
+                            document.getElementById('loading').style.display = 'none';
+                            document.getElementById('error').style.display = 'none';
+                        });
+                        videoElement.addEventListener('error', function() {
+                            if (errorDisplayedGlobal) return;
+                            // 给原生播放器一个重试机会
+                            const errCode = videoElement.error ? videoElement.error.code : -1;
+                            if (hlsPlaybackStarted) return; // 已经播起来过，忽略偶发错误
+                            errorDisplayedGlobal = true;
+                            if (typeof showError === 'function') {
+                                showError('视频加载失败，可能是源不可用或网络问题 (native HLS)');
+                            }
+                            if (typeof dplayerErrorTimeout !== 'undefined' && dplayerErrorTimeout) {
+                                clearTimeout(dplayerErrorTimeout);
+                            }
+                            dplayerErrorTimeout = setTimeout(function() {
+                                errorDisplayedGlobal = false;
+                            }, 3000);
+                        });
+                        // 直接播 m3u8，由系统解码
+                        videoElement.src = videoUrl;
+                        if (autoplayEnabled) {
+                            videoElement.play().catch(function(e) {
+                                console.warn('自动播放被阻止:', e);
+                            });
+                        }
+                        return; // 不再进入 hls.js 逻辑
+                    }
+                    // ===== 非 iOS：hls.js MSE 路径 =====
                     if (currentHls && currentHls.destroy) { 
                         try { currentHls.destroy(); } catch (e) { console.warn('销毁旧HLS实例出错:', e); }
                     }

@@ -8,8 +8,8 @@ async function handleStandardDetailFetch(id, sourceCode, customApi) {
     if (!API_SITES[sourceCode] && sourceCode !== 'custom') throw createApiError('无效的API来源');
 
     const detailUrl = customApi
-        ? `${customApi}${API_CONFIG.detail.path}${id}`
-        : `${API_SITES[sourceCode].api}${API_CONFIG.detail.path}${id}`;
+        ? buildApiDetailUrl(customApi, id)
+        : buildApiDetailUrl(API_SITES[sourceCode].api, id);
 
     const responseData = await executeApiRequest(detailUrl, {
         headers: API_CONFIG.detail.headers || {},

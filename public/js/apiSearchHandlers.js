@@ -78,7 +78,7 @@ async function handleAggregatedSearch(searchQuery) {
     if (availableSources.length === 0) throw createApiError('没有可用的API源');
 
     const searchPromises = availableSources.map(async (source) => {
-        const apiUrl = `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
+        const apiUrl = buildApiSearchUrl(API_SITES[source].api, searchQuery);
         try {
             let sourceData = await executeApiRequest(apiUrl, {
                 headers: API_CONFIG.search.headers || {},
@@ -127,7 +127,7 @@ async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
     const searchPromises = apiUrls.map(async (apiUrl, index) => {
         const sourceName = `${CUSTOM_API_CONFIG.namePrefix}${index+1}`;
         try {
-            const fullUrl = `${apiUrl}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
+            const fullUrl = buildApiSearchUrl(apiUrl, searchQuery);
             let sourceData = await executeApiRequest(fullUrl, {
                 headers: API_CONFIG.search.headers || {},
                 timeoutSecs: 8, // Shorter timeout
