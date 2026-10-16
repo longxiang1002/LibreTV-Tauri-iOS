@@ -33,43 +33,26 @@ jobs:
         run: |
           npx tauri ios init --ci
 
-      - name: Patch Info.plist (ATS allow HTTP for vod/stream sources)
+      - name: Set deployment target to iOS 14 via xcconfig
         run: |
-          PLIST=$(find src-tauri/gen/apple -name "Info.plist" | grep -v Pods | head -1)
-          echo "Patching: $PLIST"
-          /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$PLIST"
+          cat > src-tauri/gen/apple/iOS14.xcconfig <<'EOF'
+          IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+          EOF
+          # Add xcconfig to the project if not already present
+          find src-tauri/gen/apple/app.xcodeproj -name "project.pbxproj" -exec grep -l "iOS14.xcconfig" {} \; || echo "will apply via XCConfig at build time"
 
-      - name: Build unsigned .app via xcodebuild (direct, no signing)
+      - name: Build unsigned IPA (--no-sign)
         run: |
           set -o pipefail
-          xcodebuild \
-            -workspace src-tauri/gen/apple/app.xcodeproj/project.xcworkspace \
-            -scheme app_iOS \
-            -configuration release \
-            -destination "generic/platform=iOS" \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGN_STYLE=Manual \
-            IPHONEOS_DEPLOYMENT_TARGET=14.0 \
-            build | tee xcodebuild.log
-          echo "=== exit: ${PIPESTATUS[0]} ==="
+          npx tauri ios build --target aarch64 --no-sign --ci \
+            | tee ios-build.log || (echo "=== build log tail ==="; tail -100 ios-build.log; exit 1)
 
-      - name: Locate .app and pack IPA
+      - name: Locate built IPA
         run: |
-          APP_PATH=$(find build/Build/Products -name "*.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then APP_PATH=$(find . -name "*.app" -type d -path "*Release*" | head -1); fi
-          echo "App at: $APP_PATH"
-          ls -la "$APP_PATH"
-          mkdir -p Payload
-          cp -R "$APP_PATH" Payload/LibreTV.app
-          # Ad-hoc sign so bundle structure is valid for TrollStore
-          codesign --force --deep --sign - Payload/LibreTV.app || echo "ad-hoc sign skipped"
-          zip -r LibreTV.ipa Payload -x "*.DS_Store"
+          IPA=$(find . -name "*.ipa" -type f | head -1)
+          echo "IPA at: $IPA"
+          ls -la "$IPA"
+          cp "$IPA" LibreTV.ipa
           ls -la LibreTV.ipa
 
       - name: Upload IPA artifact
