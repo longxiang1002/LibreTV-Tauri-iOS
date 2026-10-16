@@ -1,0 +1,69 @@
+name: Build LibreTV iOS IPA (unsigned / TrollStore)
+
+on:
+  push:
+    branches: [ios-build]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust with iOS target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Install npm dependencies (latest Tauri CLI)
+        run: |
+          npm install
+          npm install -D @tauri-apps/cli@latest
+
+      - name: Tauri iOS init (generate Xcode project)
+        run: |
+          npx tauri ios init --ci
+
+      - name: Patch Info.plist (ATS allow HTTP for vod/stream sources)
+        run: |
+          PLIST=$(find src-tauri/gen/apple -name "Info.plist" | grep -v Pods | head -1)
+          echo "Patching: $PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$PLIST"
+
+      - name: Build unsigned .app for device
+        run: |
+          set -o pipefail
+          npx tauri ios build --target aarch64 --ci \
+            -- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" IPHONEOS_DEPLOYMENT_TARGET=14.0 \
+            | tee ios-build.log || (echo "=== build log tail ==="; tail -80 ios-build.log; exit 1)
+
+      - name: Locate .app and pack IPA
+        run: |
+          APP_PATH=$(find src-tauri/gen/apple/build -name "*.app" -type d | head -1)
+          echo "App at: $APP_PATH"
+          ls -la "$APP_PATH"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/LibreTV.app
+          # Ad-hoc sign so bundle structure is valid for TrollStore
+          codesign --force --deep --sign - Payload/LibreTV.app || echo "ad-hoc sign skipped"
+          zip -r LibreTV.ipa Payload -x "*.DS_Store"
+          ls -la LibreTV.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LibreTV-ipa
+          path: LibreTV.ipa
+          if-no-files-found: error
